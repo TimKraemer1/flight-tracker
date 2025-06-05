@@ -65,5 +65,12 @@ func main() {
     fetchOpenSkyData(&o)
 
     dist := haversing(long, lat, test_long, test_lat)
-    fmt.Printf("%f\n", dist)
+    fmt.Printf("Distance Test: %f\n", dist)
+
+    for _, state := range(o.States) {
+        origin_c := state[2]
+        f_long := state[5]
+        f_lat := state[6]
+        fmt.Printf("Origin Country: %s\t%f, %f\n", origin_c, f_long, f_lat)
+    }
 }
