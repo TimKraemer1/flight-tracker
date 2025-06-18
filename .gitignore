@@ -12,7 +12,7 @@
 credentials.json
 
 # Test Go files
-airports.go
+./airports.go
 
 # Test binary, built with `go test -c`
 *.test
