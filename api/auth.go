@@ -1,15 +1,21 @@
+package api
+
 import (
 	"os"
+	"fmt"
 	"github.com/joho/godotenv"
 )
 
-func retrieveAuthToken() (string, error) {
-	envFile, err := godotenv.Read(".env")
+func RetrieveAuthToken() (string, error) {
+	err := godotenv.Load(".env")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	token := os.Getenv("TOKEN")
+	if token == "" {
+		return "", fmt.Errorf("TOKEN not found in .env file")
+	}
 
 	return token, nil
 }
