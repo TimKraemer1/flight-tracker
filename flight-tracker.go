@@ -53,12 +53,19 @@ func main() {
 	SetRegions(true).
 	SetWordWrap(true)
 
+	// Departures info
+	departuresTextView := tview.NewTextView().
+	SetDynamicColors(true).
+	SetRegions(true).
+	SetWordWrap(true)
+
 	infoTextView.SetBorder(true).SetTitle("Airport Information")
 
 	yesterday := time.Now().AddDate(0, 0, -1)
 	formatted := yesterday.Format("Monday, January 02")
 
 	arrivalsTextView.SetBorder(true).SetTitle(fmt.Sprintf("Arrivals Information (Previous Day-%s)", formatted))
+	departuresTextView.SetBorder(true).SetTitle(fmt.Sprintf("Departures Information (Previous Day-%s)", formatted))
 
 	// Text input field - first page
 	inputField := tview.NewInputField().
@@ -99,6 +106,21 @@ func main() {
 						arrivalsTextView.SetText(arrivalInfo)
 					})
 				}()
+
+				// Get departure information asynchronously
+				go func() {
+					departures, err := api.FetchDepartures(token, airportCode)
+					if err != nil {
+						app.QueueUpdateDraw(func() {
+							showModal(fmt.Sprintf("Error: %v\n", err))
+						})
+						return
+					}
+					departureInfo = utils.FormatDepartures(departures)
+					app.QueueUpdateDraw(func(0 {
+						departuresTextView.SetText(departureInfo)
+					}))
+				}
 			}
 		}).
 		AddButton("Quit", func() {
