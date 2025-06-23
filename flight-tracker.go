@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
     "github.com/timkraemer1/flight-tracker/api"
 	"github.com/timkraemer1/flight-tracker/utils"
 	"github.com/timkraemer1/flight-tracker/models"
@@ -12,7 +13,7 @@ import (
 
 
 func main() {
-    _, err := api.RetrieveAuthToken()
+    token, err := api.RetrieveAuthToken()
     if err != nil {
         fmt.Printf("%v\n", err)
         return
@@ -27,6 +28,7 @@ func main() {
 	var airportName string
 	var airport models.Airport
 	var airportInfo string
+	var arrivalInfo string
 
 	// Modular error window
 	showModal := func(message string) {
@@ -45,7 +47,18 @@ func main() {
 	SetRegions(true).
 	SetWordWrap(true)
 
+	// Arrivals info
+	arrivalsTextView := tview.NewTextView().
+	SetDynamicColors(true).
+	SetRegions(true).
+	SetWordWrap(true)
+
 	infoTextView.SetBorder(true).SetTitle("Airport Information")
+
+	yesterday := time.Now().AddDate(0, 0, -1)
+	formatted := yesterday.Format("Monday, January 02")
+
+	arrivalsTextView.SetBorder(true).SetTitle(fmt.Sprintf("Arrivals Information (Previous Day-%s)", formatted))
 
 	// Text input field - first page
 	inputField := tview.NewInputField().
@@ -71,6 +84,21 @@ func main() {
 				airportName = airport.Name
 				airportInfo = utils.FormatAirportInfo(airport)
 				pages.SwitchToPage("list")
+
+				// Get arrival information asynchronously
+				go func() {
+					arrivals, err := api.FetchArrivals(token, airportCode)
+					if err != nil {
+						app.QueueUpdateDraw(func() {
+							showModal(fmt.Sprintf("Error: %v\n", err))
+						})
+						return
+					}
+					arrivalInfo = utils.FormatArrivals(arrivals)
+					app.QueueUpdateDraw(func() {
+						arrivalsTextView.SetText(arrivalInfo)
+					})
+				}()
 			}
 		}).
 		AddButton("Quit", func() {
@@ -84,7 +112,9 @@ func main() {
 	// List menu - second page
 	list := tview.NewList().
 		AddItem("Departures", "List departures within 1 hour of current time", '1', nil).
-		AddItem("Arrivals", "List arrivals within 1 hour of current time", '2', nil).
+		AddItem("Arrivals", "List arrivals within 1 hour of current time", '2', func() {
+			pages.SwitchToPage("arrivals")
+		}).
 		AddItem("Airport Information", "Displays important information of airport", '3', func() {
 			infoTextView.SetText(airportInfo)
 			pages.SwitchToPage("information")
@@ -124,12 +154,13 @@ func main() {
 	pages.AddPage("input", inputForm, true, true)
 	pages.AddPage("list", listPage, true, false)
 	pages.AddPage("information", infoTextView, true, false)
+	pages.AddPage("arrivals", arrivalsTextView, true, false)
 
 	// Handle global key events
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 'b' {
 			currentPage, _ := pages.GetFrontPage()
-			if currentPage == "information" {
+			if currentPage == "information" || currentPage == "arrivals" {
 				pages.SwitchToPage("list")
 				return nil
 			}
