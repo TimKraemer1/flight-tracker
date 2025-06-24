@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"os"
+	"github.com/joho/godotenv"
     "github.com/timkraemer1/flight-tracker/api"
 	"github.com/timkraemer1/flight-tracker/utils"
 	"github.com/timkraemer1/flight-tracker/models"
@@ -13,6 +15,16 @@ import (
 
 
 func main() {
+	// Create cache instance
+	err := godotenv.Load(".env")
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+	cacheLocation := os.Getenv("CACHE_PATH")
+	_, err = utils.CreateSQLiteCache(cacheLocation)
+
+	// Fetch token from .env
     token, err := api.RetrieveAuthToken()
     if err != nil {
         fmt.Printf("%v\n", err)
@@ -23,12 +35,13 @@ func main() {
     app := tview.NewApplication()
 	pages := tview.NewPages()
 	
-	// Variable to store the text from the input field
+	// Variables
 	var airportCode string
 	var airportName string
 	var airport models.Airport
 	var airportInfo string
 	var arrivalInfo string
+	var departureInfo string
 
 	// Modular error window
 	showModal := func(message string) {
@@ -117,10 +130,10 @@ func main() {
 						return
 					}
 					departureInfo = utils.FormatDepartures(departures)
-					app.QueueUpdateDraw(func(0 {
+					app.QueueUpdateDraw(func() {
 						departuresTextView.SetText(departureInfo)
-					}))
-				}
+					})
+				}()
 			}
 		}).
 		AddButton("Quit", func() {

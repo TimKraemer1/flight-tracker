@@ -41,12 +41,12 @@ func FormatDepartures(departures []models.FlightData) string {
 		return "No departure data available"
 	}
 
-	sort.Slice(departures, func(i, int j) bool {
+	sort.Slice(departures, func(i, j int) bool {
 		return departures[i].FirstSeen < departures[j].FirstSeen
 	})
 
 	var sb strings.Builder
-	for i, flight := range arrivals {
+	for i, flight := range departures {
 		departureTime := time.Unix(flight.FirstSeen, 0).Format("03:04PM")
 		arrivalTime := time.Unix(flight.LastSeen, 0).Format("03:04PM")
 
