@@ -8,6 +8,7 @@ import (
 type UIComponents struct {
 	App						*tview.Application
 	Pages					*tview.Pages
+	InputField				*tview.InputField
 	InputForm				*tview.Form
 	ArrivalsTextView		*tview.TextView
 	DeparturesTextView		*tview.TextView
@@ -16,5 +17,64 @@ type UIComponents struct {
 }
 
 func BuildUI() *UIComponents {
-	return nil
+	// Create the tview application and pages
+	app := tview.NewApplication()
+	pages := tview.NewPages()
+
+	// infoText view, for airport information
+	infoTextView := tview.NewTextView().
+	SetDynamicColors(true).
+	SetRegions(true).
+	SetWordWrap(true)
+
+	// arrivalsText view, for airport arrivals
+	arrivalsTextView := tview.NewTextView().
+	SetDynamicColors(true).
+	SetRegions(true).
+	SetWordWrap(true)
+
+	// departuresText view, for airport departures
+	departuresTextView := tview.NewTextView().
+	SetDynamicColors(true).
+	SetRegions(true).
+	SetWordWrap(true)
+
+	// inputField for inputForm
+	inputField := tview.NewInputField().
+	SetLabel("Enter Airport Code (Example, KSFO): ").
+	SetFieldWidth(5).
+	SetAcceptanceFunc(tview.InputFieldMaxLength(10))
+
+	inputForm := createInputForm(inputField)
+		
+	return &UIComponents{
+		App: app,
+		Pages: pages,
+		InputField: inputField,
+		InputForm: inputForm,
+		ArrivalsTextView: arrivalsTextView,
+		DeparturesTextView: departuresTextView,
+		InfoTextView: infoTextView,
+		ListView: nil,
+	}
+}
+
+// Create and configure the input form
+func createInputForm(inputField *tview.InputField) *tview.Form {
+	form := tview.NewForm().
+		AddFormItem(inputField).
+		SetFieldBackgroundColor(tcell.ColorWhite).
+		SetFieldTextColor(tcell.ColorBlack).
+		SetButtonBackgroundColor(tcell.ColorWhite).
+		SetButtonTextColor(tcell.ColorBlack)
+
+	form.SetBorder(true).SetTitle("Flight Tracker")
+
+	return form
+}
+
+// Set the button handlers for the input form
+func (ui *UIComponents) SetInputFormatHandlers(searchHandler, quitHandler func()) {
+	ui.InputForm.AddButton("Search", searchHandler)
+	ui.InputForm.AddButton("Quit", quitHandler)
 }

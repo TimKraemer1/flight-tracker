@@ -2,212 +2,170 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"time"
 	"os"
 	"github.com/joho/godotenv"
     "github.com/timkraemer1/flight-tracker/api"
 	"github.com/timkraemer1/flight-tracker/utils"
 	"github.com/timkraemer1/flight-tracker/models"
-    "github.com/rivo/tview"
-    "github.com/gdamore/tcell/v2"
+	"github.com/timkraemer1/flight-tracker/ui"
 )
 
+type AppState struct {
+	token 				string
+	cache 				*utils.SQLiteFlightCache
+	components			*ui.UIComponents
+	airport				models.Airport
+	airportInfo			string
+}
 
-func main() {
-	// Create cache instance
-	err := godotenv.Load(".env")
+func handleSearch(state *AppState) error {
+	airportCode := state.components.InputField.GetText()
+
+	// Check if airport code exists
+	exists, airport, err := utils.AirportExists("./airports.json", airportCode)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		return err
+	}
+
+	if !exists {
+		ui.ShowModal(state.components.Pages, "Airport does not exists (Did you remember to capitalize?)")
+		return nil
+	}
+
+	// Store airport information
+	state.airport = airport
+	state.airportInfo = utils.FormatAirportInfo(state.airport)
+	state.components.Pages.SwitchToPage("list")
+
+	// Run asynchronously fetching the arrivals and departures
+	go loadArrivals(state, airportCode)
+	go loadDepartures(state, airportCode)
+	return nil
+}
+
+func loadArrivals(state *AppState, airportCode string){
+	arrivals, err := state.cache.GetArrivals(state.token, state.airport.Icao)
+	if err != nil {
+		state.components.App.QueueUpdateDraw(func() {
+			ui.ShowModal(state.components.Pages, fmt.Sprintf("Error: %v\n", err))
+		})
 		return
 	}
-	cacheLocation := os.Getenv("CACHE_PATH")
-	cache, err := utils.CreateSQLiteCache(cacheLocation)
+	arrivalInfo := utils.FormatArrivals(arrivals)
+	state.components.App.QueueUpdateDraw(func() {
+		state.components.ArrivalsTextView.SetText(arrivalInfo)
+	})
+}
+
+func loadDepartures(state *AppState, airportCode string){
+	departures, err := state.cache.GetDepartures(state.token, state.airport.Icao)
 	if err != nil {
-		fmt.Printf("%v\n", err)
-	}
-
-	// Fetch token from .env
-    token, err := api.RetrieveAuthToken()
-    if err != nil {
-        fmt.Printf("%v\n", err)
-        return
-    }
-    fmt.Printf("Token Extracted\n")
-    
-    app := tview.NewApplication()
-	pages := tview.NewPages()
-	
-	// Variables
-	var airportCode string
-	var airportName string
-	var airport models.Airport
-	var airportInfo string
-	var arrivalInfo string
-	var departureInfo string
-
-	// Modular error window
-	showModal := func(message string) {
-		modal := tview.NewModal().
-		SetText(message).
-		AddButtons([]string{"OK"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-				pages.RemovePage("modal")
-			})
-		pages.AddPage("modal", modal, false, true)
-	}
-
-	// Airport info text view
-	infoTextView := tview.NewTextView().
-	SetDynamicColors(true).
-	SetRegions(true).
-	SetWordWrap(true)
-
-	// Arrivals info
-	arrivalsTextView := tview.NewTextView().
-	SetDynamicColors(true).
-	SetRegions(true).
-	SetWordWrap(true)
-
-	// Departures info
-	departuresTextView := tview.NewTextView().
-	SetDynamicColors(true).
-	SetRegions(true).
-	SetWordWrap(true)
-
-	infoTextView.SetBorder(true).SetTitle("Airport Information")
-
-	yesterday := time.Now().AddDate(0, 0, -1)
-	formatted := yesterday.Format("Monday, January 02")
-
-	arrivalsTextView.SetBorder(true).SetTitle(fmt.Sprintf("Arrivals Information (Previous Day-%s)", formatted))
-	departuresTextView.SetBorder(true).SetTitle(fmt.Sprintf("Departures Information (Previous Day-%s)", formatted))
-
-	// Text input field - first page
-	inputField := tview.NewInputField().
-		SetLabel("Enter Airport Code (Example, KSFO): ").
-		SetFieldWidth(5).
-		SetAcceptanceFunc(tview.InputFieldMaxLength(10))
-	
-	// First page form container
-	inputForm := tview.NewForm().
-		AddFormItem(inputField).
-			SetFieldBackgroundColor(tcell.ColorWhite).
-			SetFieldTextColor(tcell.ColorBlack).
-		AddButton("Search", func() {
-			airportCode = inputField.GetText()
-			exists, err := false, error(nil)
-			exists, airport, err = utils.AirportExists("airports.json", airportCode)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if !exists {
-				showModal("Airport does not exist")
-			} else {
-				airportName = airport.Name
-				airportInfo = utils.FormatAirportInfo(airport)
-				pages.SwitchToPage("list")
-
-				// Get arrival information asynchronously
-				go func() {
-					arrivals, err := cache.GetArrivals(token, airportCode)
-					if err != nil {
-						app.QueueUpdateDraw(func() {
-							showModal(fmt.Sprintf("Error: %v\n", err))
-						})
-						return
-					}
-					arrivalInfo = utils.FormatArrivals(arrivals)
-					app.QueueUpdateDraw(func() {
-						arrivalsTextView.SetText(arrivalInfo)
-					})
-				}()
-
-				// Get departure information asynchronously
-				go func() {
-					departures, err := api.FetchDepartures(token, airportCode)
-					if err != nil {
-						app.QueueUpdateDraw(func() {
-							showModal(fmt.Sprintf("Error: %v\n", err))
-						})
-						return
-					}
-					departureInfo = utils.FormatDepartures(departures)
-					app.QueueUpdateDraw(func() {
-						departuresTextView.SetText(departureInfo)
-					})
-				}()
-			}
-		}).
-		AddButton("Quit", func() {
-			app.Stop()
-		}).
-		SetButtonBackgroundColor(tcell.ColorWhite).
-		SetButtonTextColor(tcell.ColorBlack)
-
-	inputForm.SetBorder(true).SetTitle("Flight Tracker")
-
-	// List menu - second page
-	list := tview.NewList().
-		AddItem("Departures", "List departures within 1 hour of current time", '1', nil).
-		AddItem("Arrivals", "List arrivals within 1 hour of current time", '2', func() {
-			pages.SwitchToPage("arrivals")
-		}).
-		AddItem("Airport Information", "Displays important information of airport", '3', func() {
-			infoTextView.SetText(airportInfo)
-			pages.SwitchToPage("information")
-		}).
-		AddItem("Back", "Go back to main page", 'b', func() {	
-			pages.SwitchToPage("input")
-		}).
-		AddItem("Quit", "Exit application", 'q', func() {
-			app.Stop()
+		state.components.App.QueueUpdateDraw(func() {
+			ui.ShowModal(state.components.Pages, fmt.Sprintf("Error: %v\n", err))
 		})
+		return
+	}
+	departureInfo := utils.FormatDepartures(departures)
+	state.components.App.QueueUpdateDraw(func() {
+		state.components.DeparturesTextView.SetText(departureInfo)
+	})
+}
 
-	list.SetBorder(true).SetTitle("Airport Options")
+func setupDependencies() (string, *utils.SQLiteFlightCache, error) {
+	err := godotenv.Load(".env")
+	if err != nil {
+		return "", nil, err
+	}
+	
+	token, err := api.RetrieveAuthToken()
+	if err != nil {
+		return "", nil, err
+	}
 
-	// Displays airport name on top of second page
-	textView := tview.NewTextView().
-		SetDynamicColors(true).
-		SetRegions(true).
-		SetWordWrap(true)
+	cache, err := utils.CreateSQLiteCache(os.Getenv("CACHE_PATH"))
+	if err != nil {
+		return "", nil, err
+	}
+	return token, cache, nil
+}
 
-	// Create a flex layout for the list page
-	listPage := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(textView, 1, 0, false).
-		AddItem(list, 0, 1, true)
+func setupPages(state *AppState) {
+	pages := state.components.Pages
 
-	// Update the text view when switching to list page
+	// Create list page
+	listPage, textView, list := ui.CreateListPageLayout(state.airport.Name)
+	ui.SetMenuHandlers(list, pages, state.components.App, state.components.InfoTextView, &state.airportInfo)
+
+	// Setup page change handler
 	pages.SetChangedFunc(func() {
 		if pages.HasPage("list") {
 			currentPage, _ := pages.GetFrontPage()
 			if currentPage == "list" {
-				textView.SetText("[yellow]Airport Code: [white]" + airportName)
+				textView.SetText("[yellow]Airport: [white]" + state.airport.Name)
 			}
 		}
 	})
 
-	// Add pages
-	pages.AddPage("input", inputForm, true, true)
+	// Add all pages
+	pages.AddPage("input", state.components.InputForm, true, true)
 	pages.AddPage("list", listPage, true, false)
-	pages.AddPage("information", infoTextView, true, false)
-	pages.AddPage("arrivals", arrivalsTextView, true, false)
-	pages.AddPage("departures", departuresTextView, true, false)
+	pages.AddPage("information", state.components.InfoTextView, true, false)
+	pages.AddPage("arrivals", state.components.ArrivalsTextView, true, false)
+	pages.AddPage("departures", state.components.DeparturesTextView, true, false)
+}
 
-	// Handle global key events
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Rune() == 'b' {
-			currentPage, _ := pages.GetFrontPage()
-			if currentPage == "information" || currentPage == "arrivals" || currentPage == "departures" {
-				pages.SwitchToPage("list")
-				return nil
-			}
+func setupTextView(components *ui.UIComponents) {
+	yesterday := time.Now().AddDate(0, 0, -1)
+	formatted := yesterday.Format("Monday, January 02")
+
+	components.InfoTextView.SetBorder(true).SetTitle("Airport Information")
+	components.ArrivalsTextView.SetTitle(fmt.Sprintf("Arrivals Information (Previous Day-%s)", formatted))
+	components.DeparturesTextView.SetTitle(fmt.Sprintf("Departures Information (Previous Day-%s)", formatted))
+}
+
+func setupInputForm(state *AppState) {
+	searchHandler := func() {
+		err := handleSearch(state)
+		if err != nil {
+			ui.ShowModal(state.components.Pages, fmt.Sprintf("Error: %v", err))
 		}
-		return event
-	})
+	}
 
-	// Run the application
+	quitHandler := func() {
+		state.components.App.Stop()
+	}
+
+
+
+	state.components.SetInputFormatHandlers(searchHandler, quitHandler)
+}
+
+func main() {
+	// Get token and cache path
+	token, cache, err := setupDependencies()
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+
+
+	components := ui.BuildUI()
+	app := components.App
+	pages := components.Pages
+
+	state := &AppState{
+		token: token,
+		cache: cache,
+		components: components,
+	}
+
+	setupInputForm(state)
+	setupPages(state)
+	setupTextView(components)
+	
+	ui.SetupGlobalKeyHandler(app, pages)
+
 	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
