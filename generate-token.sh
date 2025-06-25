@@ -44,6 +44,11 @@ export TOKEN=$(curl -X POST "https://auth.opensky-network.org/auth/realms/opensk
     -d "client_id=$CLIENT_ID" \
     -d "client_secret=$CLIENT_SECRET" | jq -r .access_token)
 
+# Remove instances of CLIENT_ID, CLIENT_SECRET, and TOKEN from .env file
+sed -i '' '/^CLIENT_ID=/d' .env
+sed -i '' '/^CLIENT_SECRET=/d' .env
+sed -i '' '/^TOKEN=/d' .env
+
 echo "CLIENT_ID=$CLIENT_ID" >> .env
 echo "CLIENT_SECRET=$CLIENT_SECRET" >> .env
 echo "TOKEN=$TOKEN" >> .env

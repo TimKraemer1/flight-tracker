@@ -2,13 +2,14 @@ package utils
 
 import (
 	"database/sql"
+	"time"
+	"encoding/json"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/timkraemer1/flight-tracker/models"
 )
 
 type SQLiteFlightCache struct{
     db *sql.DB
-    arrivalCacheSize int
-    departureCacheSize int
 }
 
 func CreateSQLiteCache(dbPath string) (*SQLiteFlightCache, error) {
@@ -40,4 +41,41 @@ func CreateSQLiteCache(dbPath string) (*SQLiteFlightCache, error) {
 	}
 
 	return &SQLiteFlightCache{db: db}, nil
+}
+
+func (s *SQLiteFlightCache) LoadArrivalsFromCache(airportCode string, maxAge time.Duration) ([]models.FlightData, bool, error){
+	row := s.db.QueryRow(`SELECT flights_json, cached_at FROM arrivalsCache WHERE airport_code = ?`, airportCode)
+	var jsonData string
+	var cachedInt int64
+
+	err := row.Scan(&jsonData, cachedInt)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+
+	cachedAt := time.Unix(cachedInt, 0)
+	if time.Since(cachedAt) > maxAge {
+		return nil, false, nil
+	}
+
+	var flights []models.FlightData
+	err = json.Unmarshal([]byte(jsonData), &flights)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return flights, true, nil
+}
+
+func (s *SQLiteFlightCache) SaveArrivalsToCache(airportCode string, flights []models.FlightData) error {
+	jsonData, err := json.Marshal(flights)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(`INSERT OR REPLACE INTO arrivalsCache (airport_code, flights_json, cached_at) VALUES (?, ?, ?)`, airportCode, string(jsonData), time.Now().Unix())
+	return err
 }
