@@ -49,11 +49,10 @@ func (s *SQLiteFlightCache) LoadArrivalsFromCache(airportCode string, maxAge tim
 	var jsonData string
 	var cachedInt int64
 
-	err := row.Scan(&jsonData, cachedInt)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			return nil, false, nil
-		}
+	err := row.Scan(&jsonData, &cachedInt)
+	if err == sql.ErrNoRows {
+		return nil, false, nil
+	} else if err != nil {
 		return nil, false, err
 	}
 
@@ -99,6 +98,67 @@ func (s *SQLiteFlightCache) GetArrivals(token, airport string) ([]models.FlightD
 	}
 
 	err = s.SaveArrivalsToCache(airport, flights)
+	if err != nil {
+		return nil, err
+	}
+
+	return flights, nil
+}
+
+func (s *SQLiteFlightCache) LoadDeparturesFromCache(airportCode string, maxAge time.Duration) ([]models.FlightData, bool, error){
+	row := s.db.QueryRow(`SELECT flights_json, cached_at FROM departuresCache WHERE airport_code = ?`, airportCode)
+	var jsonData string
+	var cachedInt int64
+
+	err := row.Scan(&jsonData, &cachedInt)
+	if err == sql.ErrNoRows {
+		return nil, false, nil
+	} else if err != nil {
+		return nil, false, err
+	}
+
+	cachedAt := time.Unix(cachedInt, 0)
+	if time.Since(cachedAt) > maxAge {
+		return nil, false, nil
+	}
+
+	var flights []models.FlightData
+	err = json.Unmarshal([]byte(jsonData), &flights)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return flights, true, nil
+}
+
+func (s *SQLiteFlightCache) SaveDeparturesFromCache(airportCode string, flights []models.FlightData) error {
+	jsonData, err := json.Marshal(flights)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(`INSERT OR REPLACE INTO departuresCache (airport_code, flights_json, cached_at) VALUES (?, ?, ?)`, airportCode, string(jsonData), time.Now().Unix())
+	return err
+}
+
+func (s *SQLiteFlightCache) GetDepartures(token, airport string) ([]models.FlightData, error) {
+	maxAge := 24 * time.Hour
+
+	flights, hit, err := s.LoadDeparturesFromCache(airport, maxAge)
+	if err != nil {
+		return nil, err
+	}
+
+	if hit {
+		return flights, nil
+	}
+
+	flights, err = api.FetchDepartures(token, airport)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.SaveDeparturesFromCache(airport, flights)
 	if err != nil {
 		return nil, err
 	}

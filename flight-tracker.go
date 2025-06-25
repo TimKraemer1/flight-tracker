@@ -22,7 +22,10 @@ func main() {
 		return
 	}
 	cacheLocation := os.Getenv("CACHE_PATH")
-	_, err = utils.CreateSQLiteCache(cacheLocation)
+	cache, err := utils.CreateSQLiteCache(cacheLocation)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
 
 	// Fetch token from .env
     token, err := api.RetrieveAuthToken()
@@ -107,7 +110,7 @@ func main() {
 
 				// Get arrival information asynchronously
 				go func() {
-					arrivals, err := api.FetchArrivals(token, airportCode)
+					arrivals, err := cache.GetArrivals(token, airportCode)
 					if err != nil {
 						app.QueueUpdateDraw(func() {
 							showModal(fmt.Sprintf("Error: %v\n", err))
@@ -190,12 +193,13 @@ func main() {
 	pages.AddPage("list", listPage, true, false)
 	pages.AddPage("information", infoTextView, true, false)
 	pages.AddPage("arrivals", arrivalsTextView, true, false)
+	pages.AddPage("departures", departuresTextView, true, false)
 
 	// Handle global key events
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 'b' {
 			currentPage, _ := pages.GetFrontPage()
-			if currentPage == "information" || currentPage == "arrivals" {
+			if currentPage == "information" || currentPage == "arrivals" || currentPage == "departures" {
 				pages.SwitchToPage("list")
 				return nil
 			}
