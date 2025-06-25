@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/timkraemer1/flight-tracker/models"
+	"github.com/timkraemer1/flight-tracker/api"
 )
 
 type SQLiteFlightCache struct{
@@ -78,4 +79,29 @@ func (s *SQLiteFlightCache) SaveArrivalsToCache(airportCode string, flights []mo
 
 	_, err = s.db.Exec(`INSERT OR REPLACE INTO arrivalsCache (airport_code, flights_json, cached_at) VALUES (?, ?, ?)`, airportCode, string(jsonData), time.Now().Unix())
 	return err
+}
+
+func (s *SQLiteFlightCache) GetArrivals(token, airport string) ([]models.FlightData, error) {
+	maxAge := 24 * time.Hour
+
+	flights, hit, err := s.LoadArrivalsFromCache(airport, maxAge)
+	if err != nil {
+		return nil, err
+	}
+
+	if hit {
+		return flights, nil
+	}
+
+	flights, err = api.FetchArrivals(token, airport)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.SaveArrivalsToCache(airport, flights)
+	if err != nil {
+		return nil, err
+	}
+
+	return flights, nil
 }
