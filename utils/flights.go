@@ -18,6 +18,7 @@ func FormatArrivals(arrivals []models.FlightData) string {
 	})
 
 	var sb strings.Builder
+	sb.WriteString("[yellow::b]Navigation:[white::-] Press [green::b]'b' [white::-]to go back to previous page\n\n")
 	for i, flight := range arrivals {
 		departureTime := time.Unix(flight.FirstSeen, 0).Format("03:04PM")
 		arrivalTime := time.Unix(flight.LastSeen, 0).Format("03:04PM")
@@ -46,6 +47,7 @@ func FormatDepartures(departures []models.FlightData) string {
 	})
 
 	var sb strings.Builder
+	sb.WriteString("[yellow::b]Navigation:[white::-] Press [green::b]'b' [white::-]to go back to previous page\n")
 	for i, flight := range departures {
 		departureTime := time.Unix(flight.FirstSeen, 0).Format("03:04PM")
 		arrivalTime := time.Unix(flight.LastSeen, 0).Format("03:04PM")

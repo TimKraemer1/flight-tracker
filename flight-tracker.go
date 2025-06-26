@@ -17,6 +17,7 @@ type AppState struct {
 	components			*ui.UIComponents
 	airport				models.Airport
 	airportInfo			string
+	backStack			[]string
 }
 
 func handleSearch(state *AppState) error {
@@ -108,8 +109,8 @@ func setupPages(state *AppState) {
 	})
 
 	// Add all pages
-	pages.AddPage("input", state.components.InputForm, true, true)
 	pages.AddPage("list", listPage, true, false)
+	pages.AddPage("input", state.components.InputForm, true, true)
 	pages.AddPage("information", state.components.InfoTextView, true, false)
 	pages.AddPage("arrivals", state.components.ArrivalsTextView, true, false)
 	pages.AddPage("departures", state.components.DeparturesTextView, true, false)
@@ -135,8 +136,6 @@ func setupInputForm(state *AppState) {
 	quitHandler := func() {
 		state.components.App.Stop()
 	}
-
-
 
 	state.components.SetInputFormatHandlers(searchHandler, quitHandler)
 }

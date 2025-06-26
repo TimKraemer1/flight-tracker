@@ -20,9 +20,9 @@ func ShowModal(pages *tview.Pages, message string) {
 func CreateMenuList() *tview.List {
 	return tview.NewList().
 		AddItem("Departures", "List departures for past day", '1', nil).
-		AddItem("Arrials", "List arrivals for past day", '2', nil).
+		AddItem("Arrivals", "List arrivals for past day", '2', nil).
 		AddItem("Airport Information", "Displays important information of airport", '3', nil).
-		AddItem("Back", "Go back to main page", 'b', nil).
+		AddItem("Menu", "Go back to main menu", 'm', nil).
 		AddItem("Quit", "Exit application", 'q', nil)
 }
 
@@ -50,7 +50,8 @@ func SetupGlobalKeyHandler(app *tview.Application, pages *tview.Pages) {
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 'b' {
 			currentPage, _ := pages.GetFrontPage()
-			if currentPage == "information" || currentPage == "arrivals" || currentPage == "departures" {
+			switch currentPage {
+			case "information", "arrivals", "departures":
 				pages.SwitchToPage("list")
 			}
 		}
