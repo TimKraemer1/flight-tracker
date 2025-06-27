@@ -18,6 +18,8 @@ credentials.json
 # Test binary, built with `go test -c`
 *.test
 
+cache
+
 # Code coverage profiles and other test artifacts
 *.out
 coverage.*

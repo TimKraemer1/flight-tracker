@@ -19,9 +19,9 @@ func ShowModal(pages *tview.Pages, message string) {
 // Create the main menu list
 func CreateMenuList() *tview.List {
 	return tview.NewList().
-		AddItem("Departures", "List departures for past day", '1', nil).
-		AddItem("Arrivals", "List arrivals for past day", '2', nil).
-		AddItem("Airport Information", "Displays important information of airport", '3', nil).
+		AddItem("Airport Information", "Displays important information of airport", '1', nil).
+		AddItem("Departures", "List departures for past day", '2', nil).
+		AddItem("Arrivals", "List arrivals for past day", '3', nil).
 		AddItem("Menu", "Go back to main menu", 'm', nil).
 		AddItem("Quit", "Exit application", 'q', nil)
 }

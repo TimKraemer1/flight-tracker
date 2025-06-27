@@ -4,10 +4,16 @@ import (
 	"encoding/json"
 	"os"
 	"fmt"
+	"sync"
 	"github.com/timkraemer1/flight-tracker/models"
 )
 
+var airportFileMutex sync.Mutex
+
 func AirportExists(filename, code string) (bool, models.Airport, error) {
+	airportFileMutex.Lock()
+	defer airportFileMutex.Unlock()
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return false, models.Airport{}, err

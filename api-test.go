@@ -5,7 +5,7 @@ import (
 	"log"
 	"github.com/timkraemer1/flight-tracker/api"
 	// "github.com/timkraemer1/flight-tracker/models"
-	"github.com/timkraemer1/flight-tracker/utils"
+	// "github.com/timkraemer1/flight-tracker/utils"
 )
 
 func main() {
@@ -20,7 +20,5 @@ func main() {
 		log.Printf("%v\n", err)
 		return
 	}
-	var formattedString string
-	formattedString = utils.FormatArrivals(flights)
-	fmt.Print(formattedString)
+	fmt.Print(flights)
 }
