@@ -31,12 +31,12 @@ func SetMenuHandlers(list *tview.List, pages *tview.Pages, app *tview.Applicatio
 	list.SetSelectedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
 		switch index {
 		case 0:
-			pages.SwitchToPage("departures")
-		case 1:
-			pages.SwitchToPage("arrivals")
-		case 2:
 			infoTextView.SetText(*airportInfo)
 			pages.SwitchToPage("information")
+		case 1:
+			pages.SwitchToPage("departures")
+		case 2:
+			pages.SwitchToPage("arrivals")
 		case 3:
 			pages.SwitchToPage("input")
 		case 4:

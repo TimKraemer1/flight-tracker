@@ -15,10 +15,9 @@ func main() {
         return
     } 
 
-	flights, err := api.FetchArrivals(token, "KSFO")
+	err = api.FetchFlight(token, "a290d0")
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
 	}
-	fmt.Print(flights)
 }

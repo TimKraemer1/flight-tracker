@@ -76,7 +76,7 @@ func FetchArrivals(token string, airport string) ([]models.FlightData, error) {
 }
 
 func FetchDepartures(token string, airport string) ([]models.FlightData, error) {
-        now := time.Now().Unix()
+    now := time.Now().Unix()
     begin := now - (3600 * 24)
     end := now
 
@@ -117,4 +117,48 @@ func FetchDepartures(token string, airport string) ([]models.FlightData, error) 
     }
 
     return flights, nil
+}
+
+func FetchFlight(token string, airplane string) (models.FlightData, error) {
+    now := time.Now().Unix()
+    begin := now - (3600 * 24)
+    end := now
+    
+    // Encode query parameters in the URL
+    url := fmt.Sprintf(
+        "https://opensky-network.org/api/flights/aircraft?icao24=%s&begin=%d&end=%d",
+        airplane, begin, end,
+    )
+
+    req, err := http.NewRequest("GET", url, nil)
+    if err != nil {
+        return models.FlightData{}, err
+    }
+
+    req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        return models.FlightData{}, err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        body, _ := io.ReadAll(resp.Body)
+        return models.FlightData{}, fmt.Errorf("unexpected status: %s, body: %s", resp.Status, string(body))
+    }
+
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return models.FlightData{}, err
+    }
+
+    var flight models.FlightData
+    err = json.Unmarshal(body, &flight)
+    if err != nil {
+        return models.FlightData{}, err
+    }
+
+    return flight, nil
 }

@@ -10,6 +10,20 @@ import (
 
 var airportFileMutex sync.Mutex
 
+func LoadAirportData(filename string) (map[string]models.Airport, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var airportMap map[string]models.Airport
+	if err := json.Unmarshal(data, &airportMap); err != nil {
+		return nil, err
+	}
+
+	return airportMap, nil
+}
+
 func AirportExists(filename, code string) (bool, models.Airport, error) {
 	airportFileMutex.Lock()
 	defer airportFileMutex.Unlock()

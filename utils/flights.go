@@ -17,19 +17,47 @@ func FormatArrivals(arrivals []models.FlightData) string {
 		return arrivals[i].LastSeen < arrivals[j].LastSeen
 	})
 
+	airportMap, err := LoadAirportData("airports.json")
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
+
 	var sb strings.Builder
 	sb.WriteString("[yellow::b]Navigation:[white::-] Press [green::b]'b' [white::-]to go back to previous page\n\n")
+
 	for i, flight := range arrivals {
-		departureTime := time.Unix(flight.FirstSeen, 0).Format("03:04PM")
-		arrivalTime := time.Unix(flight.LastSeen, 0).Format("03:04PM")
+		callSign := strings.TrimSpace(flight.CallSign)
+		departureTime := time.Unix(flight.FirstSeen, 0).Format("01/02 03:04PM MST")
+		arrivalTime := time.Unix(flight.LastSeen, 0).Format("01/02 03:04PM MST")
+
+		estDep := flight.EstDepartureAirport
+		locationDep := ""
+		if airport, ok := airportMap[estDep]; ok {
+			estDep = airport.Name
+			locationDep = fmt.Sprintf(" - %s %s, %s", airport.City, airport.State, airport.Country)
+		} else {
+			estDep = "[red]Unknown"
+		}
+
+		estArr := flight.EstArrivalAirport
+		locationArr := ""
+		if airport, ok := airportMap[estArr]; ok {
+			estArr = airport.Name
+			locationArr = fmt.Sprintf(" - %s %s, %s", airport.City, airport.State, airport.Country)
+		} else {
+			estArr = "[red]Unknown"
+		}
 
 		sb.WriteString(fmt.Sprintf(
-			"[green]Flight %d\n[white]Callsign: [yellow]%s\n[white]Departure: [cyan]%s [white] at [blue]%s\n[white]Arrival: [cyan]%s [white]at [blue]%s\n\n",
+			"[green]Flight %d\n[white]Callsign: [yellow]%s, %s\n[white]Departure: [cyan]%s%s\n[blue]%s\n\n[white]Arrival: [cyan]%s%s\n[blue]%s\n\n",
 			i+1,
-			strings.TrimSpace(flight.CallSign),
-			flight.EstDepartureAirport,
+			callSign,
+			flight.Icao24,
+			estDep,
+			locationDep,
 			departureTime,
-			flight.EstArrivalAirport,
+			estArr,
+			locationArr,
 			arrivalTime,
 		))
 	}
@@ -43,22 +71,49 @@ func FormatDepartures(departures []models.FlightData) string {
 	}
 
 	sort.Slice(departures, func(i, j int) bool {
-		return departures[i].FirstSeen < departures[j].FirstSeen
+		return departures[i].LastSeen < departures[j].LastSeen
 	})
 
+	airportMap, err := LoadAirportData("airports.json")
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
+
 	var sb strings.Builder
-	sb.WriteString("[yellow::b]Navigation:[white::-] Press [green::b]'b' [white::-]to go back to previous page\n")
+	sb.WriteString("[yellow::b]Navigation:[white::-] Press [green::b]'b' [white::-]to go back to previous page\n\n")
+
 	for i, flight := range departures {
-		departureTime := time.Unix(flight.FirstSeen, 0).Format("01/02 03:04PM")
-		arrivalTime := time.Unix(flight.LastSeen, 0).Format("01/02 03:04PM")
+		callSign := strings.TrimSpace(flight.CallSign)
+		departureTime := time.Unix(flight.FirstSeen, 0).Format("01/02 03:04PM MST")
+		arrivalTime := time.Unix(flight.LastSeen, 0).Format("01/02 03:04PM MST")
+
+		estDep := flight.EstDepartureAirport
+		locationDep := ""
+		if airport, ok := airportMap[estDep]; ok {
+			estDep = airport.Name
+			locationDep = fmt.Sprintf(" - %s %s, %s", airport.City, airport.State, airport.Country)
+		} else {
+			estDep = "[red]Unknown"
+		}
+
+		estArr := flight.EstArrivalAirport
+		locationArr := ""
+		if airport, ok := airportMap[estArr]; ok {
+			estArr = airport.Name
+			locationArr = fmt.Sprintf(" - %s %s, %s", airport.City, airport.State, airport.Country)
+		} else {
+			estArr = "[red]Unknown"
+		}
 
 		sb.WriteString(fmt.Sprintf(
-			"[green]Flight %d\n[white]Callsign: [yellow]%s\n[white]Departure: [cyan]%s [white] at [blue]%s\n[white]Arrival: [cyan]%s [white]at [blue]%s\n\n",
+			"[green]Flight %d\n[white]Callsign: [yellow]%s\n[white]Departure: [cyan]%s%s\n[blue]%s\n\n[white]Arrival: [cyan]%s%s\n[blue]%s\n\n",
 			i+1,
-			strings.TrimSpace(flight.CallSign),
-			flight.EstDepartureAirport,
+			callSign,
+			estDep,
+			locationDep,
 			departureTime,
-			flight.EstArrivalAirport,
+			estArr,
+			locationArr,
 			arrivalTime,
 		))
 	}
