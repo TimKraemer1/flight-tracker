@@ -19,6 +19,7 @@ type AppState struct {
 	airportInfo			string
 }
 
+// UI main airport search functionality
 func handleSearch(state *AppState) error {
 	airportCode := state.components.InputField.GetText()
 
@@ -44,6 +45,7 @@ func handleSearch(state *AppState) error {
 	return nil
 }
 
+// Loads airport arrivals from airport code
 func loadArrivals(state *AppState, airportCode string){
 	arrivals, err := state.cache.GetArrivals(state.token, state.airport.Icao)
 	if err != nil {
@@ -58,6 +60,7 @@ func loadArrivals(state *AppState, airportCode string){
 	})
 }
 
+// Loads airport departures from airport code
 func loadDepartures(state *AppState, airportCode string){
 	departures, err := state.cache.GetDepartures(state.token, state.airport.Icao)
 	if err != nil {
@@ -72,6 +75,7 @@ func loadDepartures(state *AppState, airportCode string){
 	})
 }
 
+// Sets app dependencies, such as loading env file, retrieving auth token, and creating the cache
 func setupDependencies() (string, *utils.SQLiteFlightCache, error) {
 	err := godotenv.Load(".env")
 	if err != nil {
@@ -90,6 +94,7 @@ func setupDependencies() (string, *utils.SQLiteFlightCache, error) {
 	return token, cache, nil
 }
 
+// Sets up tview pages and the page changing handler
 func setupPages(state *AppState) {
 	pages := state.components.Pages
 
@@ -108,13 +113,14 @@ func setupPages(state *AppState) {
 	})
 
 	// Add all pages
-	pages.AddPage("list", listPage, true, false)
-	pages.AddPage("input", state.components.InputFormPage, true, true)
-	pages.AddPage("information", state.components.InfoTextView, true, false)
-	pages.AddPage("arrivals", state.components.ArrivalsTextView, true, false)
-	pages.AddPage("departures", state.components.DeparturesTextView, true, false)
+	pages.AddPage("list", listPage, true, false)										// options page
+	pages.AddPage("input", state.components.InputFormPage, true, true)					// input form page
+	pages.AddPage("information", state.components.InfoTextView, true, false)			// airport information page
+	pages.AddPage("arrivals", state.components.ArrivalsTextView, true, false)			// arrivals list page
+	pages.AddPage("departures", state.components.DeparturesTextView, true, false)		// departures list page
 }
 
+// TextView for pages
 func setupTextView(components *ui.UIComponents) {
 	yesterday := time.Now().AddDate(0, 0, -1)
 	formatted := yesterday.Format("Monday, January 02")
@@ -124,6 +130,7 @@ func setupTextView(components *ui.UIComponents) {
 	components.DeparturesTextView.SetTitle(fmt.Sprintf("Departures Information (Previous Day-%s)", formatted))
 }
 
+// Main menu input
 func setupInputForm(state *AppState) {
 	searchHandler := func() {
 		err := handleSearch(state)

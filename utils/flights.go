@@ -8,11 +8,13 @@ import (
 	"github.com/timkraemer1/flight-tracker/models"
 )
 
+// Format arrival data from models.FlightData -> string
 func FormatArrivals(arrivals []models.FlightData) string {
 	if len(arrivals) == 0 {
 		return "No arrival data available"
 	}
 
+	// Sort arrivals by time
 	sort.Slice(arrivals, func(i, j int) bool {
 		return arrivals[i].LastSeen < arrivals[j].LastSeen
 	})
@@ -65,11 +67,13 @@ func FormatArrivals(arrivals []models.FlightData) string {
 	return sb.String()
 }
 
+// Format departure data from models.FlightData -> string
 func FormatDepartures(departures []models.FlightData) string {
 	if len(departures) == 0 {
 		return "No departure data available"
 	}
 
+	// Sort departures by time
 	sort.Slice(departures, func(i, j int) bool {
 		return departures[i].LastSeen < departures[j].LastSeen
 	})
